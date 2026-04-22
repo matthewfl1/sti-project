@@ -2,121 +2,146 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>STI-Cloud ERP v6.0 | Автономная версия</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STI Group | Калькулятор логистики</title>
     <style>
-        :root { --main: #ce1126; --dark: #2d3436; }
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #dfe6e9; display: flex; justify-content: center; padding: 20px; }
-        .card { background: white; width: 100%; max-width: 480px; padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); border-top: 10px solid var(--main); }
-        .status-box { font-size: 13px; padding: 12px; border-radius: 8px; margin-bottom: 20px; background: #f8f9fa; border: 1px solid #ddd; font-weight: bold; text-align: center; }
-        label { display: block; margin-bottom: 8px; font-weight: bold; color: #636e72; font-size: 14px; }
-        select, input { width: 100%; padding: 14px; margin-bottom: 20px; border: 2px solid #eee; border-radius: 10px; font-size: 16px; box-sizing: border-box; }
-        button { width: 100%; padding: 16px; background: var(--main); color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 18px; box-shadow: 0 4px 10px rgba(206, 17, 38, 0.3); }
-        button:hover { background: #b00e20; transform: translateY(-1px); }
-        .result { margin-top: 25px; padding: 20px; background: #fff5f5; border-radius: 10px; display: none; border: 1px solid #fed7d7; }
-        .truck-info { margin-top: 15px; padding: 10px; background: var(--dark); color: white; border-radius: 8px; text-align: center; font-weight: bold; }
+        :root { --main: #ce1126; --dark: #2d3436; --gray: #f4f7f6; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #dfe6e9; display: flex; justify-content: center; padding: 20px; margin: 0; }
+        .card { background: white; width: 100%; max-width: 500px; padding: 30px; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.2); border-top: 10px solid var(--main); }
+        h2 { text-align: center; color: var(--dark); margin-bottom: 25px; font-size: 24px; }
+        
+        .form-group { margin-bottom: 18px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; color: #636e72; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        select, input { width: 100%; padding: 14px; border: 2px solid #eee; border-radius: 12px; font-size: 16px; box-sizing: border-box; transition: all 0.3s; }
+        select:focus, input:focus { border-color: var(--main); outline: none; background: #fffafb; }
+        
+        button { width: 100%; padding: 18px; background: var(--main); color: white; border: none; border-radius: 12px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: 0.3s; }
+        button:hover { background: #a80e1f; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(206, 17, 38, 0.3); }
+
+        .result-box { margin-top: 25px; padding: 20px; background: #fff5f5; border-radius: 15px; display: none; border: 1px solid #fed7d7; animation: slideUp 0.4s ease-out; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .res-item { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 16px; color: var(--dark); }
+        .truck-tag { display: block; text-align: center; margin-top: 15px; padding: 10px; background: var(--dark); color: white; border-radius: 8px; font-weight: bold; font-size: 14px; }
+        
+        #error-msg { color: #ce1126; font-size: 12px; text-align: center; margin-top: 10px; display: none; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <div id="status" class="status-box" style="color: #d63031;">⏳ Инициализация облака...</div>
-    <h2>Расчет STI Group</h2>
+    <h2>STI Group Logistics</h2>
     
-    <label>Продукция из Google Таблицы:</label>
-    <select id="productList" onchange="updateInfo()">
-        <option>Загрузка данных...</option>
-    </select>
-
-    <label id="unitLabel">Количество:</label>
-    <input type="number" id="quantity" placeholder="0.00">
-
-    <button onclick="calculateLogistics()">Рассчитать заказ</button>
-
-    <div id="resCard" class="result">
-        <div style="font-size: 16px;">Масса груза: <strong id="weightResult">0</strong> кг</div>
-        <div id="truckResult" class="truck-info"></div>
+    <div class="form-group">
+        <label>Категория продукции</label>
+        <select id="categorySelect" onchange="filterProducts()">
+            <option value="">Загрузка категорий...</option>
+        </select>
     </div>
+
+    <div class="form-group">
+        <label>Наименование (ГОСТ)</label>
+        <select id="productSelect" onchange="updateUnit()">
+            <option value="">Сначала выберите категорию</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label id="unitLabel">Количество</label>
+        <input type="number" id="quantityInput" placeholder="0.00">
+    </div>
+
+    <button onclick="calculate()">Рассчитать параметры</button>
+
+    <div id="resultArea" class="result-box">
+        <div class="res-item"><span>Общая масса:</span> <strong id="weightRes">0</strong> кг</div>
+        <div class="res-item"><span>Объем:</span> <strong id="volRes">0</strong> м³</div>
+        <div id="truckRes" class="truck-tag"></div>
+    </div>
+
+    <div id="error-msg">⚠️ Ошибка связи с облачной базой данных</div>
 </div>
 
 <script>
-    const SHEET_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSYKUmtE5Idl6Jb5Le2Xrus-AV-9gdcDPHckyejXN4WKrfdR7qsMQmdv7mDoxXYVfwdFKQfBBTBeLsa/pub?output=csv';
-    let database = [];
+    const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSYKUmtE5Idl6Jb5Le2Xrus-AV-9gdcDPHckyejXN4WKrfdR7qsMQmdv7mDoxXYVfwdFKQfBBTBeLsa/pub?output=csv';
+    let fullDatabase = [];
 
-    // Используем динамический скрипт для обхода ограничений безопасности
-    async function loadData() {
-        const status = document.getElementById('status');
+    async function initCloudData() {
         try {
-            // Используем fetch с отключенным кэшем
-            const response = await fetch(SHEET_CSV + '&nocache=' + Date.now());
-            if (!response.ok) throw new Error();
-            
+            const response = await fetch(CSV_URL + '&nocache=' + Date.now());
             const text = await response.text();
-            parseCSV(text);
             
-            status.innerText = "✅ СИНХРОНИЗИРОВАНО С ОБЛАКОМ";
-            status.style.color = "#27ae60";
-            status.style.borderColor = "#2ecc71";
-        } catch (e) {
-            status.innerText = "⚠️ Ошибка доступа. Нажмите кнопку ниже для активации:";
-            // Добавляем кнопку принудительной загрузки, если fetch заблокирован
-            const btn = document.createElement('button');
-            btn.innerText = "Обновить вручную";
-            btn.style.marginTop = "10px";
-            btn.style.fontSize = "12px";
-            btn.onclick = () => location.reload();
-            status.appendChild(btn);
-        }
-    }
-
-    function parseCSV(data) {
-        const lines = data.split(/\r?\n/).filter(line => line.trim() !== "");
-        const select = document.getElementById('productList');
-        select.innerHTML = "";
-        database = [];
-
-        // Парсим со 2-й строки
-        for (let i = 1; i < lines.length; i++) {
-            const cols = lines[i].split(/[,;]/);
-            if (cols.length >= 3) {
-                const item = {
-                    name: cols[1].replace(/"/g, ''),
-                    weight: parseFloat(cols[2].replace(/"/g, '').replace(',', '.')),
-                    unit: cols[3] ? cols[3].replace(/"/g, '') : 'шт'
-                };
-                database.push(item);
-                select.add(new Option(item.name, item.weight));
+            const lines = text.split(/\r?\n/).filter(l => l.trim() !== "");
+            
+            // Парсим данные
+            for (let i = 1; i < lines.length; i++) {
+                const cols = lines[i].split(/[,;]/);
+                if (cols.length >= 3) {
+                    fullDatabase.push({
+                        category: cols[0].replace(/"/g, '').trim(),
+                        name: cols[1].replace(/"/g, '').trim(),
+                        weight: parseFloat(cols[2].replace(/"/g, '').replace(',', '.')),
+                        unit: cols[3] ? cols[3].replace(/"/g, '').trim() : 'шт'
+                    });
+                }
             }
+
+            // Заполняем категории
+            const categories = [...new Set(fullDatabase.map(item => item.category))];
+            const catSel = document.getElementById('categorySelect');
+            catSel.innerHTML = '<option value="" disabled selected>Выберите раздел...</option>';
+            categories.forEach(c => catSel.add(new Option(c, c)));
+            
+        } catch (e) {
+            document.getElementById('error-msg').style.display = 'block';
+            console.error("Cloud Error:", e);
         }
-        updateInfo();
     }
 
-    function updateInfo() {
-        const sel = document.getElementById('productList');
-        if (database[sel.selectedIndex]) {
-            document.getElementById('unitLabel').innerText = `Количество (${database[sel.selectedIndex].unit}):`;
-        }
-    }
-
-    function calculateLogistics() {
-        const q = parseFloat(document.getElementById('quantity').value);
-        const w = parseFloat(document.getElementById('productList').value);
-        if (!q) return alert("Укажите объем заказа");
-
-        const totalW = (q * w).toFixed(2);
-        document.getElementById('weightResult').innerText = totalW;
+    function filterProducts() {
+        const category = document.getElementById('categorySelect').value;
+        const prodSel = document.getElementById('productSelect');
+        prodSel.innerHTML = '<option value="" disabled selected>Выберите товар...</option>';
         
-        let truck = "";
-        if (totalW < 1500) truck = "🚚 ГАЗель (до 1.5т)";
-        else if (totalW < 5000) truck = "🚛 Валдай / 5-тонник";
-        else if (totalW < 20000) truck = "🚜 Еврофура (20т)";
-        else truck = "🚜 Спецтехника (>20т)";
-
-        document.getElementById('truckResult').innerText = truck;
-        document.getElementById('resCard').style.display = 'block';
+        const filtered = fullDatabase.filter(item => item.category === category);
+        filtered.forEach(item => {
+            let opt = new Option(item.name, item.weight);
+            opt.dataset.unit = item.unit;
+            prodSel.add(opt);
+        });
     }
 
-    // Запуск
-    window.onload = loadData;
+    function updateUnit() {
+        const sel = document.getElementById('productSelect');
+        const unit = sel.options[sel.selectedIndex].dataset.unit;
+        document.getElementById('unitLabel').innerText = `Введите количество (${unit}):`;
+    }
+
+    function calculate() {
+        const qty = parseFloat(document.getElementById('quantityInput').value);
+        const factor = parseFloat(document.getElementById('productSelect').value);
+        
+        if (!qty || isNaN(factor)) return alert("Заполните все поля");
+
+        const weight = (qty * factor).toFixed(2);
+        const volume = (weight / 7850 * 1.4).toFixed(3);
+
+        document.getElementById('weightRes').innerText = weight;
+        document.getElementById('volRes').innerText = volume;
+
+        let truck = "";
+        if (weight < 1500) truck = "🚚 ГАЗель (1.5т)";
+        else if (weight < 5000) truck = "🚛 Валдай / Газон (5т)";
+        else if (weight < 20000) truck = "🚜 Еврофура (20т)";
+        else truck = "🚨 Требуется спецтехника";
+
+        document.getElementById('truckRes').innerText = "РЕКОМЕНДУЕМ: " + truck;
+        document.getElementById('resultArea').style.display = 'block';
+    }
+
+    initCloudData();
 </script>
+
 </body>
 </html>
