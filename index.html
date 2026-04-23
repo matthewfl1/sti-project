@@ -3,29 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>STI Group | Калькулятор логистики</title>
+    <title>STI Group | Интеллектуальный конфигуратор</title>
     <style>
         :root { --main: #ce1126; --dark: #2d3436; --gray: #f4f7f6; }
         body { font-family: 'Segoe UI', system-ui, sans-serif; background: #dfe6e9; display: flex; justify-content: center; padding: 20px; margin: 0; }
         .card { background: white; width: 100%; max-width: 500px; padding: 30px; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.2); border-top: 10px solid var(--main); }
-        h2 { text-align: center; color: var(--dark); margin-bottom: 25px; font-size: 24px; }
+        h2 { text-align: center; color: var(--dark); margin-bottom: 25px; font-size: 22px; }
         
         .form-group { margin-bottom: 18px; }
-        label { display: block; margin-bottom: 8px; font-weight: 600; color: #636e72; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; }
+        label { display: block; margin-bottom: 6px; font-weight: 600; color: #636e72; font-size: 13px; text-transform: uppercase; }
         
-        select, input { width: 100%; padding: 14px; border: 2px solid #eee; border-radius: 12px; font-size: 16px; box-sizing: border-box; transition: all 0.3s; }
+        select, input { width: 100%; padding: 12px; border: 2px solid #eee; border-radius: 10px; font-size: 16px; box-sizing: border-box; transition: 0.3s; }
         select:focus, input:focus { border-color: var(--main); outline: none; background: #fffafb; }
         
+        /* Стиль для поля поиска */
+        .search-box { background: #fff9f9; border: 1px dashed var(--main); margin-bottom: 10px; font-size: 14px; }
+
         button { width: 100%; padding: 18px; background: var(--main); color: white; border: none; border-radius: 12px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: 0.3s; }
-        button:hover { background: #a80e1f; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(206, 17, 38, 0.3); }
+        button:hover { background: #a80e1f; transform: translateY(-2px); }
 
         .result-box { margin-top: 25px; padding: 20px; background: #fff5f5; border-radius: 15px; display: none; border: 1px solid #fed7d7; animation: slideUp 0.4s ease-out; }
         @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
-        .res-item { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 16px; color: var(--dark); }
-        .truck-tag { display: block; text-align: center; margin-top: 15px; padding: 10px; background: var(--dark); color: white; border-radius: 8px; font-weight: bold; font-size: 14px; }
+        .res-item { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 16px; }
+        .truck-tag { display: block; text-align: center; margin-top: 15px; padding: 10px; background: var(--dark); color: white; border-radius: 8px; font-weight: bold; }
         
-        #error-msg { color: #ce1126; font-size: 12px; text-align: center; margin-top: 10px; display: none; }
+        #error-msg { color: var(--main); font-size: 12px; text-align: center; margin-top: 10px; display: none; }
     </style>
 </head>
 <body>
@@ -34,33 +37,35 @@
     <h2>STI Group Logistics</h2>
     
     <div class="form-group">
-        <label>Категория продукции</label>
+        <label>1. Категория продукции</label>
         <select id="categorySelect" onchange="filterProducts()">
-            <option value="">Загрузка категорий...</option>
+            <option value="">Загрузка данных...</option>
         </select>
     </div>
 
     <div class="form-group">
-        <label>Наименование (ГОСТ)</label>
+        <label>2. Поиск и выбор товара</label>
+        <input type="text" id="searchInput" class="search-box" onkeyup="searchProduct()" placeholder="🔍 Начните вводить название или ГОСТ...">
+        
         <select id="productSelect" onchange="updateUnit()">
             <option value="">Сначала выберите категорию</option>
         </select>
     </div>
 
     <div class="form-group">
-        <label id="unitLabel">Количество</label>
+        <label id="unitLabel">3. Количество</label>
         <input type="number" id="quantityInput" placeholder="0.00">
     </div>
 
-    <button onclick="calculate()">Рассчитать параметры</button>
+    <button onclick="calculate()">Рассчитать заказ</button>
 
     <div id="resultArea" class="result-box">
         <div class="res-item"><span>Общая масса:</span> <strong id="weightRes">0</strong> кг</div>
-        <div class="res-item"><span>Объем:</span> <strong id="volRes">0</strong> м³</div>
+        <div class="res-item"><span>Объем (прибл.):</span> <strong id="volRes">0</strong> м³</div>
         <div id="truckRes" class="truck-tag"></div>
     </div>
 
-    <div id="error-msg">⚠️ Ошибка связи с облачной базой данных</div>
+    <div id="error-msg">⚠️ Ошибка связи с облаком</div>
 </div>
 
 <script>
@@ -71,10 +76,8 @@
         try {
             const response = await fetch(CSV_URL + '&nocache=' + Date.now());
             const text = await response.text();
-            
             const lines = text.split(/\r?\n/).filter(l => l.trim() !== "");
             
-            // Парсим данные
             for (let i = 1; i < lines.length; i++) {
                 const cols = lines[i].split(/[,;]/);
                 if (cols.length >= 3) {
@@ -87,7 +90,6 @@
                 }
             }
 
-            // Заполняем категории
             const categories = [...new Set(fullDatabase.map(item => item.category))];
             const catSel = document.getElementById('categorySelect');
             catSel.innerHTML = '<option value="" disabled selected>Выберите раздел...</option>';
@@ -95,13 +97,15 @@
             
         } catch (e) {
             document.getElementById('error-msg').style.display = 'block';
-            console.error("Cloud Error:", e);
         }
     }
 
     function filterProducts() {
         const category = document.getElementById('categorySelect').value;
         const prodSel = document.getElementById('productSelect');
+        const searchInput = document.getElementById('searchInput');
+        
+        searchInput.value = ""; // Сбрасываем поиск при смене категории
         prodSel.innerHTML = '<option value="" disabled selected>Выберите товар...</option>';
         
         const filtered = fullDatabase.filter(item => item.category === category);
@@ -112,10 +116,36 @@
         });
     }
 
+    // ФУНКЦИЯ ПОИСКА ВНУТРИ СПИСКА
+    function searchProduct() {
+        const input = document.getElementById('searchInput').value.toLowerCase();
+        const select = document.getElementById('productSelect');
+        const options = select.options;
+        let firstVisible = null;
+
+        for (let i = 0; i < options.length; i++) {
+            if (options[i].disabled) continue; // Пропускаем заглушку "Выберите товар"
+            
+            const text = options[i].text.toLowerCase();
+            const isMatch = text.includes(input);
+            options[i].style.display = isMatch ? "" : "none";
+            
+            if (isMatch && !firstVisible) firstVisible = options[i];
+        }
+        
+        // Автоматически выбираем первый совпавший элемент для удобства
+        if (firstVisible && input.length > 2) {
+            select.value = firstVisible.value;
+            updateUnit();
+        }
+    }
+
     function updateUnit() {
         const sel = document.getElementById('productSelect');
-        const unit = sel.options[sel.selectedIndex].dataset.unit;
-        document.getElementById('unitLabel').innerText = `Введите количество (${unit}):`;
+        if (sel.selectedIndex !== -1) {
+            const unit = sel.options[sel.selectedIndex].dataset.unit;
+            if (unit) document.getElementById('unitLabel').innerText = `3. Количество (${unit}):`;
+        }
     }
 
     function calculate() {
@@ -125,23 +155,22 @@
         if (!qty || isNaN(factor)) return alert("Заполните все поля");
 
         const weight = (qty * factor).toFixed(2);
-        const volume = (weight / 7850 * 1.4).toFixed(3);
+        const volume = (weight / 7850 * 1.5).toFixed(3);
 
         document.getElementById('weightRes').innerText = weight;
         document.getElementById('volRes').innerText = volume;
 
         let truck = "";
-        if (weight < 1500) truck = "🚚 ГАЗель (1.5т)";
+        if (weight < 1500) truck = "🚚 ГАЗель (до 1.5т)";
         else if (weight < 5000) truck = "🚛 Валдай / Газон (5т)";
         else if (weight < 20000) truck = "🚜 Еврофура (20т)";
-        else truck = "🚨 Требуется спецтехника";
+        else truck = "🚨 Требуется спецтехника / несколько машин";
 
-        document.getElementById('truckRes').innerText = "РЕКОМЕНДУЕМ: " + truck;
+        document.getElementById('truckRes').innerText = "ЛОГИСТИКА: " + truck;
         document.getElementById('resultArea').style.display = 'block';
     }
 
     initCloudData();
 </script>
-
 </body>
 </html>
