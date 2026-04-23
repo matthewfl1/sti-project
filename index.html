@@ -2,93 +2,105 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>STI Calculator</title>
     <style>
-        body { font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; background: #fff; color: #333; }
-        .calc-wrapper { max-width: 450px; margin: auto; border: 1px solid #e5e7eb; padding: 25px; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
-        h2 { color: #b30000; font-size: 16px; text-transform: uppercase; margin-top: 0; border-bottom: 2px solid #b30000; padding-bottom: 10px; letter-spacing: 1px; }
-        label { display: block; margin: 15px 0 5px; font-size: 12px; font-weight: 800; text-transform: uppercase; color: #666; }
-        input, select { width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 4px; box-sizing: border-box; font-size: 14px; outline: none; }
-        input:focus { border-color: #b30000; }
-        .result-area { margin-top: 25px; background: #fef2f2; padding: 15px; border-radius: 4px; border: 1px solid #fee2e2; }
-        .result-line { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; }
-        .val { font-weight: 800; color: #b30000; }
-        .btn-calc { width: 100%; background: #b30000; color: white; border: none; padding: 14px; margin-top: 20px; border-radius: 4px; cursor: pointer; font-weight: bold; text-transform: uppercase; transition: 0.2s; }
-        .btn-calc:hover { background: #8e0000; }
-        #list { height: 120px; margin-top: 5px; }
+        body { font-family: 'Segoe UI', sans-serif; padding: 15px; margin: 0; background: #fff; }
+        .calc-box { border: 1px solid #ddd; border-radius: 8px; padding: 20px; max-width: 400px; margin: auto; }
+        h2 { color: #b30000; font-size: 14px; border-bottom: 2px solid #b30000; padding-bottom: 8px; text-transform: uppercase; margin: 0 0 15px; }
+        label { display: block; margin: 12px 0 5px; font-weight: bold; font-size: 11px; color: #666; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 14px; }
+        #list { height: 100px; margin-top: 5px; }
+        .res { margin-top: 20px; background: #fef2f2; padding: 15px; border-radius: 4px; border: 1px solid #fee2e2; }
+        .row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 14px; }
+        .val { font-weight: bold; color: #b30000; }
+        .btn { width: 100%; background: #b30000; color: white; border: none; padding: 12px; margin-top: 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
     </style>
 </head>
 <body>
-
-<div class="calc-wrapper">
-    <h2>Расчет параметров отгрузки</h2>
-    <label>Поиск продукции (ГОСТ / Тип):</label>
-    <input type="text" id="search" placeholder="Введите название..." oninput="filter()">
-    <select id="list" size="5" onclick="sel()"></select>
-    <label id="uL">Количество:</label>
-    <input type="number" id="q" value="1" min="1" oninput="calc()">
-    <div class="result-area">
-        <div class="result-line">Итоговый вес: <span class="val" id="tw">0.00 кг</span></div>
-        <div class="result-line">Транспорт: <span class="val" id="tr">Не определен</span></div>
+    <div class="calc-box">
+        <h2>Терминал расчета</h2>
+        <label>Поиск в базе (ГОСТ):</label>
+        <input type="text" id="s" placeholder="Введите название..." oninput="filter()">
+        <select id="list" size="5" onclick="sel()"></select>
+        <label id="uL">Количество:</label>
+        <input type="number" id="q" value="1" min="1" oninput="calc()">
+        <div class="res">
+            <div class="row">Вес позиции: <span class="val" id="tw">0.00 кг</span></div>
+            <div class="row">Транспорт: <span class="val" id="tr">Не определен</span></div>
+        </div>
+        <button class="btn" onclick="calc()">РАССЧИТАТЬ</button>
     </div>
-    <button class="btn-calc" onclick="calc()">Рассчитать</button>
-</div>
 
-<script>
-    let db = [];
-    const url = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSYKUmtE5Idl6Jb5Le2Xrus-AV-9gdcDPHckyejXN4WKrfdR7qsMQmdv7mDoxXYVfwdFKQfBBTBeLsa/pub?output=csv';
+    <script>
+        let db = [];
+        const url = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSYKUmtE5Idl6Jb5Le2Xrus-AV-9gdcDPHckyejXN4WKrfdR7qsMQmdv7mDoxXYVfwdFKQfBBTBeLsa/pub?output=csv';
 
-    async function load() {
-        try {
-            const r = await fetch(url);
-            const t = await r.text();
-            const lines = t.split(/\r?\n/).slice(1);
-            db = lines.map(l => {
-                const c = l.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-                if (c.length < 3) return null;
-                return {
-                    n: c[1].replace(/^"|"$/g, '').trim(),
-                    w: parseFloat(c[2].replace(',', '.').replace(/"/g, '')),
-                    u: c[3] ? c[3].replace(/"/g, '').trim() : 'ед.'
-                };
-            }).filter(i => i && !isNaN(i.w));
-            filter();
-        } catch (e) { console.error("Ошибка загрузки данных"); }
-    }
+        async function load() {
+            try {
+                const r = await fetch(url);
+                const t = await r.text();
+                const lines = t.split(/\r?\n/).filter(l => l.trim() !== "");
+                db = lines.slice(1).map(l => {
+                    const c = l.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                    return {
+                        n: c[1]?.replace(/["']/g, "").trim(),
+                        w: parseFloat(c[2]?.replace(",", ".").replace(/[^0-9.]/g, "")),
+                        u: c[3]?.replace(/["']/g, "").trim() || "ед."
+                    };
+                }).filter(i => i.n && !isNaN(i.w));
+                filter();
+            } catch (e) { console.error("Ошибка базы"); }
+        }
 
-    function filter() {
-        const s = document.getElementById('search').value.toLowerCase();
-        const l = document.getElementById('list');
-        l.innerHTML = '';
-        db.filter(i => i.n.toLowerCase().includes(s)).forEach(i => {
-            let o = document.createElement('option');
-            o.value = i.w; o.text = i.n; o.dataset.u = i.u;
-            l.add(o);
+        function filter() {
+            const query = document.getElementById('s').value.toLowerCase();
+            const l = document.getElementById('list');
+            l.innerHTML = '';
+            db.filter(i => i.n.toLowerCase().includes(query)).forEach(i => {
+                let o = document.createElement('option');
+                o.value = i.w; o.text = i.n; o.dataset.u = i.u;
+                l.add(o);
+            });
+        }
+
+        function sel() {
+            const l = document.getElementById('list');
+            if (l.selectedIndex === -1) return;
+            document.getElementById('s').value = l.options[l.selectedIndex].text;
+            document.getElementById('uL').innerText = `Количество (${l.options[l.selectedIndex].dataset.u}):`;
+            calc();
+        }
+
+        function calc() {
+            const l = document.getElementById('list');
+            if (l.selectedIndex === -1) return;
+            const res = parseFloat(l.value) * (parseFloat(document.getElementById('q').value) || 0);
+            document.getElementById('tw').innerText = res.toFixed(2) + " кг";
+            let t = "Не определен";
+            if (res > 0 && res <= 1500) t = "ГАЗель (1.5т)";
+            else if (res <= 5000) t = "Валдай (5т)";
+            else if (res <= 10000) t = "КАМАЗ (10т)";
+            else if (res <= 21000) t = "Еврофура (21т)";
+            else if (res > 21000) t = "Несколько ТС";
+            document.getElementById('tr').innerText = t;
+        }
+
+        // ПРИЕМ СООБЩЕНИЙ ОТ САЙТА
+        window.addEventListener('message', function(e) {
+            if (e.data.type === 'setProduct') {
+                document.getElementById('s').value = e.data.name;
+                filter();
+                // Автоматически выбираем первый найденный товар
+                setTimeout(() => {
+                    const l = document.getElementById('list');
+                    if(l.options.length > 0) {
+                        l.selectedIndex = 0;
+                        sel();
+                    }
+                }, 100);
+            }
         });
-    }
 
-    function sel() {
-        const l = document.getElementById('list');
-        if (l.selectedIndex === -1) return;
-        document.getElementById('search').value = l.options[l.selectedIndex].text;
-        document.getElementById('uL').innerText = `Количество (${l.options[l.selectedIndex].dataset.u}):`;
-        calc();
-    }
-
-    function calc() {
-        const l = document.getElementById('list');
-        if (l.selectedIndex === -1) return;
-        const total = parseFloat(l.value) * (parseFloat(document.getElementById('q').value) || 0);
-        document.getElementById('tw').innerText = total.toFixed(2) + " кг";
-        let t = "Не определен";
-        if (total > 0 && total <= 1500) t = "ГАЗель (1.5т)";
-        else if (total > 1500 && total <= 5000) t = "Валдай (5т)";
-        else if (total > 5000 && total <= 10000) t = "КАМАЗ (10т)";
-        else if (total > 10000 && total <= 21000) t = "Еврофура (21т)";
-        else if (total > 21000) t = "Требуется несколько ТС";
-        document.getElementById('tr').innerText = t;
-    }
-    load();
-</script>
+        load();
+    </script>
 </body>
 </html>
