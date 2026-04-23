@@ -2,175 +2,102 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>STI Group | Интеллектуальный конфигуратор</title>
+    <title>Калькулятор STI Group</title>
     <style>
-        :root { --main: #ce1126; --dark: #2d3436; --gray: #f4f7f6; }
-        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #dfe6e9; display: flex; justify-content: center; padding: 20px; margin: 0; }
-        .card { background: white; width: 100%; max-width: 500px; padding: 30px; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.2); border-top: 10px solid var(--main); }
-        h2 { text-align: center; color: var(--dark); margin-bottom: 25px; font-size: 22px; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: white; margin: 0; padding: 20px; color: #333; }
+        .calc-box { max-width: 500px; margin: auto; border: 1px solid #ddd; padding: 20px; border-radius: 8px; }
+        h2 { color: #b30000; font-size: 18px; text-transform: uppercase; margin-top: 0; border-bottom: 2px solid #b30000; padding-bottom: 10px; }
         
-        .form-group { margin-bottom: 18px; }
-        label { display: block; margin-bottom: 6px; font-weight: 600; color: #636e72; font-size: 13px; text-transform: uppercase; }
+        label { display: block; margin: 15px 0 5px; font-size: 13px; font-weight: bold; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 14px; }
         
-        select, input { width: 100%; padding: 12px; border: 2px solid #eee; border-radius: 10px; font-size: 16px; box-sizing: border-box; transition: 0.3s; }
-        select:focus, input:focus { border-color: var(--main); outline: none; background: #fffafb; }
+        .result-area { margin-top: 20px; background: #f9f9f9; padding: 15px; border-radius: 4px; border-left: 4px solid #b30000; }
+        .result-line { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; }
+        .val { font-weight: bold; color: #b30000; }
         
-        /* Стиль для поля поиска */
-        .search-box { background: #fff9f9; border: 1px dashed var(--main); margin-bottom: 10px; font-size: 14px; }
-
-        button { width: 100%; padding: 18px; background: var(--main); color: white; border: none; border-radius: 12px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: 0.3s; }
-        button:hover { background: #a80e1f; transform: translateY(-2px); }
-
-        .result-box { margin-top: 25px; padding: 20px; background: #fff5f5; border-radius: 15px; display: none; border: 1px solid #fed7d7; animation: slideUp 0.4s ease-out; }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        
-        .res-item { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 16px; }
-        .truck-tag { display: block; text-align: center; margin-top: 15px; padding: 10px; background: var(--dark); color: white; border-radius: 8px; font-weight: bold; }
-        
-        #error-msg { color: var(--main); font-size: 12px; text-align: center; margin-top: 10px; display: none; }
+        .btn-calc { width: 100%; background: #b30000; color: white; border: none; padding: 12px; margin-top: 20px; border-radius: 4px; cursor: pointer; font-weight: bold; text-transform: uppercase; transition: 0.3s; }
+        .btn-calc:hover { background: #800000; }
     </style>
 </head>
 <body>
 
-<div class="card">
-    <h2>STI Group Logistics</h2>
+<div class="calc-box">
+    <h2>Расчет параметров отгрузки</h2>
     
-    <div class="form-group">
-        <label>1. Категория продукции</label>
-        <select id="categorySelect" onchange="filterProducts()">
-            <option value="">Загрузка данных...</option>
-        </select>
+    <label>Выберите продукцию (ГОСТ):</label>
+    <input type="text" id="productSearch" placeholder="Начните вводить название или ГОСТ..." oninput="filterProducts()">
+    <select id="productList" size="5" style="margin-top:5px;" onclick="selectProduct()"></select>
+
+    <label id="unitLabel">Количество (ед.):</label>
+    <input type="number" id="quantity" value="1" min="1" oninput="calculate()">
+
+    <div class="result-area">
+        <div class="result-line">Теоретический вес: <span class="val" id="totalWeight">0.00 кг</span></div>
+        <div class="result-line">Рекомендуемый транспорт: <span class="val" id="truckType">Не определен</span></div>
     </div>
-
-    <div class="form-group">
-        <label>2. Поиск и выбор товара</label>
-        <input type="text" id="searchInput" class="search-box" onkeyup="searchProduct()" placeholder="🔍 Начните вводить название или ГОСТ...">
-        
-        <select id="productSelect" onchange="updateUnit()">
-            <option value="">Сначала выберите категорию</option>
-        </select>
-    </div>
-
-    <div class="form-group">
-        <label id="unitLabel">3. Количество</label>
-        <input type="number" id="quantityInput" placeholder="0.00">
-    </div>
-
-    <button onclick="calculate()">Рассчитать заказ</button>
-
-    <div id="resultArea" class="result-box">
-        <div class="res-item"><span>Общая масса:</span> <strong id="weightRes">0</strong> кг</div>
-        <div class="res-item"><span>Объем (прибл.):</span> <strong id="volRes">0</strong> м³</div>
-        <div id="truckRes" class="truck-tag"></div>
-    </div>
-
-    <div id="error-msg">⚠️ Ошибка связи с облаком</div>
+    
+    <button class="btn-calc" onclick="calculate()">Пересчитать</button>
 </div>
 
 <script>
-    const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSYKUmtE5Idl6Jb5Le2Xrus-AV-9gdcDPHckyejXN4WKrfdR7qsMQmdv7mDoxXYVfwdFKQfBBTBeLsa/pub?output=csv';
-    let fullDatabase = [];
+    let products = [];
+    const SHEET_URL = 'ССЫЛКА_НА_ТВОЙ_CSV'; // ЗАМЕНИ НА СВОЮ
 
-    async function initCloudData() {
+    async function loadData() {
         try {
-            const response = await fetch(CSV_URL + '&nocache=' + Date.now());
-            const text = await response.text();
-            const lines = text.split(/\r?\n/).filter(l => l.trim() !== "");
-            
-            for (let i = 1; i < lines.length; i++) {
-                const cols = lines[i].split(/[,;]/);
-                if (cols.length >= 3) {
-                    fullDatabase.push({
-                        category: cols[0].replace(/"/g, '').trim(),
-                        name: cols[1].replace(/"/g, '').trim(),
-                        weight: parseFloat(cols[2].replace(/"/g, '').replace(',', '.')),
-                        unit: cols[3] ? cols[3].replace(/"/g, '').trim() : 'шт'
-                    });
-                }
-            }
-
-            const categories = [...new Set(fullDatabase.map(item => item.category))];
-            const catSel = document.getElementById('categorySelect');
-            catSel.innerHTML = '<option value="" disabled selected>Выберите раздел...</option>';
-            categories.forEach(c => catSel.add(new Option(c, c)));
-            
-        } catch (e) {
-            document.getElementById('error-msg').style.display = 'block';
-        }
+            const response = await fetch(SHEET_URL);
+            const data = await response.text();
+            const rows = data.split('\n').slice(1);
+            products = rows.map(row => {
+                const cols = row.split(',');
+                return { name: cols[1], weight: parseFloat(cols[2]), unit: cols[3] };
+            }).filter(p => p.name);
+            filterProducts();
+        } catch (e) { console.error("Ошибка загрузки БД"); }
     }
 
     function filterProducts() {
-        const category = document.getElementById('categorySelect').value;
-        const prodSel = document.getElementById('productSelect');
-        const searchInput = document.getElementById('searchInput');
-        
-        searchInput.value = ""; // Сбрасываем поиск при смене категории
-        prodSel.innerHTML = '<option value="" disabled selected>Выберите товар...</option>';
-        
-        const filtered = fullDatabase.filter(item => item.category === category);
-        filtered.forEach(item => {
-            let opt = new Option(item.name, item.weight);
-            opt.dataset.unit = item.unit;
-            prodSel.add(opt);
+        const query = document.getElementById('productSearch').value.toLowerCase();
+        const list = document.getElementById('productList');
+        list.innerHTML = '';
+        products.filter(p => p.name.toLowerCase().includes(query)).forEach(p => {
+            let opt = document.createElement('option');
+            opt.value = p.weight;
+            opt.text = p.name;
+            opt.dataset.unit = p.unit;
+            list.add(opt);
         });
     }
 
-    // ФУНКЦИЯ ПОИСКА ВНУТРИ СПИСКА
-    function searchProduct() {
-        const input = document.getElementById('searchInput').value.toLowerCase();
-        const select = document.getElementById('productSelect');
-        const options = select.options;
-        let firstVisible = null;
-
-        for (let i = 0; i < options.length; i++) {
-            if (options[i].disabled) continue; // Пропускаем заглушку "Выберите товар"
-            
-            const text = options[i].text.toLowerCase();
-            const isMatch = text.includes(input);
-            options[i].style.display = isMatch ? "" : "none";
-            
-            if (isMatch && !firstVisible) firstVisible = options[i];
-        }
-        
-        // Автоматически выбираем первый совпавший элемент для удобства
-        if (firstVisible && input.length > 2) {
-            select.value = firstVisible.value;
-            updateUnit();
-        }
-    }
-
-    function updateUnit() {
-        const sel = document.getElementById('productSelect');
-        if (sel.selectedIndex !== -1) {
-            const unit = sel.options[sel.selectedIndex].dataset.unit;
-            if (unit) document.getElementById('unitLabel').innerText = `3. Количество (${unit}):`;
-        }
+    function selectProduct() {
+        const list = document.getElementById('productList');
+        document.getElementById('productSearch').value = list.options[list.selectedIndex].text;
+        document.getElementById('unitLabel').innerText = `Количество (${list.options[list.selectedIndex].dataset.unit}):`;
+        calculate();
     }
 
     function calculate() {
-        const qty = parseFloat(document.getElementById('quantityInput').value);
-        const factor = parseFloat(document.getElementById('productSelect').value);
+        const list = document.getElementById('productList');
+        if (list.selectedIndex === -1) return;
+
+        const weightPerUnit = parseFloat(list.value);
+        const qty = parseFloat(document.getElementById('quantity').value) || 0;
+        const total = weightPerUnit * qty;
         
-        if (!qty || isNaN(factor)) return alert("Заполните все поля");
+        document.getElementById('totalWeight').innerText = total.toFixed(2) + " кг";
 
-        const weight = (qty * factor).toFixed(2);
-        const volume = (weight / 7850 * 1.5).toFixed(3);
+        let truck = "Не определен";
+        if (total > 0 && total <= 1500) truck = "ГАЗель (до 1.5т)";
+        else if (total > 1500 && total <= 5000) truck = "ГАЗон / Валдай (до 5т)";
+        else if (total > 5000 && total <= 10000) truck = "КАМАЗ (до 10т)";
+        else if (total > 10000 && total <= 21000) truck = "Еврофура (до 21т)";
+        else if (total > 21000) truck = "Требуется несколько ТС";
 
-        document.getElementById('weightRes').innerText = weight;
-        document.getElementById('volRes').innerText = volume;
-
-        let truck = "";
-        if (weight < 1500) truck = "🚚 ГАЗель (до 1.5т)";
-        else if (weight < 5000) truck = "🚛 Валдай / Газон (5т)";
-        else if (weight < 20000) truck = "🚜 Еврофура (20т)";
-        else truck = "🚨 Требуется спецтехника / несколько машин";
-
-        document.getElementById('truckRes').innerText = "ЛОГИСТИКА: " + truck;
-        document.getElementById('resultArea').style.display = 'block';
+        document.getElementById('truckType').innerText = truck;
     }
 
-    initCloudData();
+    loadData();
 </script>
+
 </body>
 </html>
