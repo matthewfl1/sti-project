@@ -3,104 +3,103 @@
 <head>
     <meta charset="UTF-8">
     <style>
-        body { font-family: 'Segoe UI', sans-serif; padding: 15px; margin: 0; background: #fff; }
-        .calc-box { border: 1px solid #ddd; border-radius: 8px; padding: 20px; max-width: 400px; margin: auto; }
-        h2 { color: #b30000; font-size: 14px; border-bottom: 2px solid #b30000; padding-bottom: 8px; text-transform: uppercase; margin: 0 0 15px; }
-        label { display: block; margin: 12px 0 5px; font-weight: bold; font-size: 11px; color: #666; }
-        input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 14px; }
-        #list { height: 100px; margin-top: 5px; }
-        .res { margin-top: 20px; background: #fef2f2; padding: 15px; border-radius: 4px; border: 1px solid #fee2e2; }
-        .row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 14px; }
-        .val { font-weight: bold; color: #b30000; }
-        .btn { width: 100%; background: #b30000; color: white; border: none; padding: 12px; margin-top: 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        :root { --sti-blue: #004a99; --sti-dark: #002d5e; --white: #ffffff; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f4f8; margin: 0; padding: 12px; }
+        
+        .calc-container { background: var(--white); border-radius: 10px; padding: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border: 1px solid #d1d9e0; }
+        h3 { color: var(--sti-blue); font-size: 16px; margin: 0 0 15px 0; text-align: center; border-bottom: 2px solid var(--sti-blue); padding-bottom: 8px; }
+
+        .group { margin-bottom: 12px; }
+        label { display: block; font-size: 11px; font-weight: 700; color: #555; text-transform: uppercase; margin-bottom: 4px; }
+        
+        select, input { width: 100%; padding: 10px; border: 2px solid #e1e8ed; border-radius: 6px; box-sizing: border-box; font-size: 14px; font-weight: 600; }
+        select:focus, input:focus { border-color: var(--sti-blue); outline: none; }
+
+        .results { background: var(--sti-dark); color: white; padding: 12px; border-radius: 8px; margin-top: 15px; }
+        .res-row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px; opacity: 0.9; }
+        .res-total { border-top: 1px solid rgba(255,255,255,0.2); margin-top: 8px; padding-top: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .total-val { font-size: 20px; font-weight: 800; color: #4ade80; }
+
+        .btn-add { background: #22c55e; color: white; border: none; width: 100%; padding: 12px; border-radius: 6px; font-weight: 800; cursor: pointer; margin-top: 12px; text-transform: uppercase; transition: 0.2s; }
+        .btn-add:hover { background: #16a34a; transform: scale(1.02); }
     </style>
 </head>
 <body>
-    <div class="calc-box">
-        <h2>Терминал расчета</h2>
-        <label>Поиск в базе (ГОСТ):</label>
-        <input type="text" id="s" placeholder="Введите название..." oninput="filter()">
-        <select id="list" size="5" onclick="sel()"></select>
-        <label id="uL">Количество:</label>
-        <input type="number" id="q" value="1" min="1" oninput="calc()">
-        <div class="res">
-            <div class="row">Вес позиции: <span class="val" id="tw">0.00 кг</span></div>
-            <div class="row">Транспорт: <span class="val" id="tr">Не определен</span></div>
-        </div>
-        <button class="btn" onclick="calc()">РАССЧИТАТЬ</button>
+
+<div class="calc-container">
+    <h3>ИНЖЕНЕРНЫЙ РАСЧЕТ</h3>
+    
+    <div class="group">
+        <label>Наименование продукции</label>
+        <select id="prodSelect" onchange="calc()">
+            <option value="" data-p="0" data-w="0" data-u="ед.">-- Выберите из базы --</option>
+            <option value="Сетка 50х50х3" data-p="285" data-w="1.85" data-u="карта">Сетка сварная 50х50х3</option>
+            <option value="Сетка 100х100х4" data-p="980" data-w="7.30" data-u="карта">Сетка сварная 100х100х4</option>
+            <option value="Сетка 150х150х8" data-p="6200" data-w="49.80" data-u="карта">Сетка сварная 150х150х8</option>
+            <option value="Проволока 3.0 ВР-1" data-p="82000" data-w="1000" data-u="бухта">Проволока 3.0 ВР-1 (Бухта)</option>
+            <option value="Болт M24x120" data-p="480" data-w="0.585" data-u="шт">Болт высокопрочный M24x120</option>
+            <option value="Гайка M24" data-p="110" data-w="0.155" data-u="шт">Гайка высокопрочная M24</option>
+        </select>
     </div>
 
-    <script>
-        let db = [];
-        const url = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSYKUmtE5Idl6Jb5Le2Xrus-AV-9gdcDPHckyejXN4WKrfdR7qsMQmdv7mDoxXYVfwdFKQfBBTBeLsa/pub?output=csv';
+    <div class="group">
+        <label>Количество (<span id="unitName">ед.</span>)</label>
+        <input type="number" id="qty" value="1" min="1" oninput="calc()">
+    </div>
 
-        async function load() {
-            try {
-                const r = await fetch(url);
-                const t = await r.text();
-                const lines = t.split(/\r?\n/).filter(l => l.trim() !== "");
-                db = lines.slice(1).map(l => {
-                    const c = l.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-                    return {
-                        n: c[1]?.replace(/["']/g, "").trim(),
-                        w: parseFloat(c[2]?.replace(",", ".").replace(/[^0-9.]/g, "")),
-                        u: c[3]?.replace(/["']/g, "").trim() || "ед."
-                    };
-                }).filter(i => i.n && !isNaN(i.w));
-                filter();
-            } catch (e) { console.error("Ошибка базы"); }
-        }
+    <div class="results">
+        <div class="res-row"><span>Вес ед.:</span> <span id="unitW">0</span> кг</div>
+        <div class="res-row"><span>Общий вес:</span> <span id="totalW">0</span> кг</div>
+        <div class="res-total">
+            <span>ИТОГО:</span>
+            <span class="total-val"><span id="totalP">0</span> ₽</span>
+        </div>
+    </div>
 
-        function filter() {
-            const query = document.getElementById('s').value.toLowerCase();
-            const l = document.getElementById('list');
-            l.innerHTML = '';
-            db.filter(i => i.n.toLowerCase().includes(query)).forEach(i => {
-                let o = document.createElement('option');
-                o.value = i.w; o.text = i.n; o.dataset.u = i.u;
-                l.add(o);
-            });
-        }
+    <button class="btn-add" onclick="pushToSite()">Внести в спецификацию</button>
+</div>
 
-        function sel() {
-            const l = document.getElementById('list');
-            if (l.selectedIndex === -1) return;
-            document.getElementById('s').value = l.options[l.selectedIndex].text;
-            document.getElementById('uL').innerText = `Количество (${l.options[l.selectedIndex].dataset.u}):`;
-            calc();
-        }
-
-        function calc() {
-            const l = document.getElementById('list');
-            if (l.selectedIndex === -1) return;
-            const res = parseFloat(l.value) * (parseFloat(document.getElementById('q').value) || 0);
-            document.getElementById('tw').innerText = res.toFixed(2) + " кг";
-            let t = "Не определен";
-            if (res > 0 && res <= 1500) t = "ГАЗель (1.5т)";
-            else if (res <= 5000) t = "Валдай (5т)";
-            else if (res <= 10000) t = "КАМАЗ (10т)";
-            else if (res <= 21000) t = "Еврофура (21т)";
-            else if (res > 21000) t = "Несколько ТС";
-            document.getElementById('tr').innerText = t;
-        }
-
-        // ПРИЕМ СООБЩЕНИЙ ОТ САЙТА
-        window.addEventListener('message', function(e) {
-            if (e.data.type === 'setProduct') {
-                document.getElementById('s').value = e.data.name;
-                filter();
-                // Автоматически выбираем первый найденный товар
-                setTimeout(() => {
-                    const l = document.getElementById('list');
-                    if(l.options.length > 0) {
-                        l.selectedIndex = 0;
-                        sel();
-                    }
-                }, 100);
+<script>
+    // Прием данных от основного сайта
+    window.addEventListener('message', function(e) {
+        if (e.data.type === 'setProduct') {
+            const sel = document.getElementById('prodSelect');
+            for(let i=0; i<sel.options.length; i++){
+                if(sel.options[i].text.includes(e.data.name)) {
+                    sel.selectedIndex = i;
+                    calc();
+                    break;
+                }
             }
-        });
+        }
+    });
 
-        load();
-    </script>
+    function calc() {
+        const opt = document.getElementById('prodSelect').selectedOptions[0];
+        const q = parseFloat(document.getElementById('qty').value) || 0;
+        
+        const price = parseFloat(opt.dataset.p);
+        const weight = parseFloat(opt.dataset.w);
+        
+        document.getElementById('unitName').innerText = opt.dataset.u;
+        document.getElementById('unitW').innerText = weight;
+        document.getElementById('totalW').innerText = (weight * q).toFixed(2);
+        
+        const total = (price * q).toFixed(0);
+        document.getElementById('totalP').innerText = Number(total).toLocaleString();
+    }
+
+    function pushToSite() {
+        const opt = document.getElementById('prodSelect').selectedOptions[0];
+        const total = document.getElementById('totalP').innerText.replace(/\s/g, '');
+        if(opt.value === "") return;
+
+        window.parent.postMessage({
+            type: 'addToCart',
+            name: opt.text + ' (x' + document.getElementById('qty').value + ')',
+            price: parseInt(total)
+        }, '*');
+    }
+</script>
 </body>
 </html>
